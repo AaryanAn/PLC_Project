@@ -58,17 +58,63 @@ public final class Lexer {
      * by {@link #lex()}
      */
     public Token lexToken() {
+        // method to check what type of characters each one is in the sequence
+
+        if (peek("[A-Za-z_]")) {
+            // If the character is an identifier, send to identifier method
+            return lexIdentifier();
+        }
+
+        else if (peek("[+-]?") && peek("[0-9]")) {
+            // check for integer signage, or integer itself
+            return lexNumber();
+
+        }
+
+        else if (peek("'")) {
+            // check for character literal in the case of a single '
+            return lexCharacter();
+        }
 
 
+        else if (peek("\"")) {
+            // check for a string literal in the case of a "
+            return lexString();
+        }
 
+        else if (peek("[<>!=]") || peek("[&|]") || peek("[^\\w\\s]")) {
+            // check for special character or operator
+            return lexOperator();
+        }
+
+        // throw parse exception is characters does nt match any of the above specified
+        throw new ParseException("Unexpected character: " + chars.get(0), chars.index);
         //throw new UnsupportedOperationException(); //TODO
     }
 
     public Token lexIdentifier() {
-        throw new UnsupportedOperationException(); //TODO
+        // we can start by checking if the beginning character is valid
+        if (!peek("[A-Za-z_]")) {
+            throw new ParseException("Incorrect beginning to identifier", chars.index);
+        }
+
+        // as long as the identifier is valid, continue going through the characters
+        while (peek("[A-Za-z0-9_-]")) {
+            chars.advance();  // as long as the identifier is valid, continue going through the characters
+        }
+
+        // test with and without this
+//        String identifier = chars.input.substring(chars.index - chars.length, chars.index);
+//        if (identifier.startsWith("-")) {
+//            throw new ParseException("Identifiers cannot start with a hyphen", chars.index - chars.length);
+//        }
+
+        return chars.emit(Token.Type.IDENTIFIER);
+        //throw new UnsupportedOperationException(); //TODO
     }
 
     public Token lexNumber() {
+
         throw new UnsupportedOperationException(); //TODO
     }
 
