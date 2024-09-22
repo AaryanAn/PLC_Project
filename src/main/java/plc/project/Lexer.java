@@ -114,8 +114,45 @@ public final class Lexer {
     }
 
     public Token lexNumber() {
+        // account for the signage of the number (this will also help consider the hyphen in other cases)
+        if (peek("[+-]")) {
+            chars.advance();
+        }
+        // ensure zero is allowed
+        if (peek("0")) {
+            chars.advance();
+            if (peek("[0-9]")) {
+                // Ensure leading 0 is not allowed
+                throw new ParseException("There CANNOT be a leading zero", chars.index);
+            }
+        } // try not 0 before all ints
+        else if (!peek("[0]")) {
+            // allow other integers (not 0)
+            while (peek("[0-9]")) {
+                chars.advance();  // Consume digits of the integer
+            }
+        } else {
+            throw new ParseException("Number cannot be formatted this way", chars.index);
+        }
 
-        throw new UnsupportedOperationException(); //TODO
+        // allow decimal literal
+        if (peek("\\.")) {
+            chars.advance();
+            if (!peek("[0-9]")) {
+                // throw exception in case of no number (int) after decimal
+                throw new ParseException("Invalid decimal format", chars.index);
+            }
+            // allow values after decimal
+            while (peek("[0-9]")) {
+                chars.advance();
+            }
+            return chars.emit(Token.Type.DECIMAL);
+            // send decimal to DECIMAL
+        }
+
+        // In case of no decimal - permit
+        return chars.emit(Token.Type.INTEGER);
+        //throw new UnsupportedOperationException(); //TODO
     }
 
     public Token lexCharacter() {
