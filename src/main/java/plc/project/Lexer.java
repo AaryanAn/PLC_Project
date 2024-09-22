@@ -156,7 +156,40 @@ public final class Lexer {
     }
 
     public Token lexCharacter() {
-        throw new UnsupportedOperationException(); //TODO
+        // character must have single quote
+        if (!peek("'")) {
+            throw new ParseException("Character literal not initialized with single quote", chars.index);
+        }
+        chars.advance();
+        // ensure escape sequence is accounted for
+        if (peek("\\\\")) {
+            // account for backslash/escape sequence
+            chars.advance();
+            if (peek("[bnrt'\"\\\\]")) {
+                // cover escape characters
+                chars.advance();
+
+            } else {
+
+                throw new ParseException("This escape sequence is not covered", chars.index);
+            }
+        } else if (peek("[^'\n\r\\\\]")) {
+            // individual valid character
+
+            chars.advance();
+        } else {
+
+            throw new ParseException("This is an invalid character literal", chars.index);
+        }
+        // account for single quote closing character
+        if (!peek("'")) {
+
+            throw new ParseException("Character literal not terminated with single quote", chars.index);
+        }
+        chars.advance();
+
+        return chars.emit(Token.Type.CHARACTER);
+        //throw new UnsupportedOperationException(); //TODO
     }
 
     public Token lexString() {
