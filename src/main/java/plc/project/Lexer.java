@@ -31,11 +31,13 @@ public final class Lexer {
     public List<Token> lex() {
         List<Token> tokens = new ArrayList<>();
         // Initializing list to store tokens in
+        //System.out.println("Starting Lexing..."); // debug print statement
 
         while (chars.has(0)) {
             // Ignore whitespace characters as they should not be added to the list
             while (peek("[ \b\n\r\t]")) {
                 match("[ \b\n\r\t]");
+                chars.skip(); // restarting token count once whitespace is skipped
             }
 
             if (chars.has(0)) {
@@ -58,6 +60,7 @@ public final class Lexer {
      * by {@link #lex()}
      */
     public Token lexToken() {
+        //System.out.println("Lexing Token at index " + chars.index + ": " + chars.get(0)); // print statements for debugging
         // method to check what type of characters each one is in the sequence
 
         if (peek("[A-Za-z_]")) {
@@ -65,7 +68,7 @@ public final class Lexer {
             return lexIdentifier();
         }
 
-        else if (peek("[+-]?") && peek("[0-9]")) {
+        else if (peek("[+-]?") || peek("[0-9]")) {
             // check for integer signage, or integer itself
             return lexNumber();
 
@@ -121,7 +124,7 @@ public final class Lexer {
         // ensure zero is allowed
         if (peek("0")) {
             chars.advance();
-            if (peek("[0-9]")&&!peek("\\.")) {
+            if (peek("[0-9]") && !peek("\\.")) {
                 // Ensure leading 0 is not allowed
                 throw new ParseException("There CANNOT be a leading zero", chars.index);
             }
