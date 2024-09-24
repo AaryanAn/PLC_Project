@@ -121,12 +121,12 @@ public final class Lexer {
         // ensure zero is allowed
         if (peek("0")) {
             chars.advance();
-            if (peek("[0-9]")) {
+            if (peek("[0-9]")&&!peek("\\.")) {
                 // Ensure leading 0 is not allowed
                 throw new ParseException("There CANNOT be a leading zero", chars.index);
             }
-        } // try not 0 before all ints
-        else if (!peek("[0]")) {
+        } // try all but 0 before all ints
+        else if (peek("[1-9]")) {
             // allow other integers (not 0)
             while (peek("[0-9]")) {
                 chars.advance();  // Consume digits of the integer
@@ -193,15 +193,79 @@ public final class Lexer {
     }
 
     public Token lexString() {
-        throw new UnsupportedOperationException(); //TODO
+        // Make sure string starts with double quote "
+        if (!peek("\"")) {
+            throw new ParseException("String literal must start with a double quote ", chars.index);
+        }
+        chars.advance();
+
+        // Read string contents until double quote to terminate
+        while (!peek("\"") && !peek("[\n\r]")) {
+            // Terminate at double quote or newline
+            if (peek("\\\\")) {
+                // account for backspace sequence
+                chars.advance();
+                if (peek("[bnrt'\"\\\\]")) {
+                    chars.advance();
+                } else {
+                    throw new ParseException("Invalid escape sequence in string", chars.index);
+                }
+            } else if (peek("[^\"]")) {
+                // all characters except unescaped double quote
+                chars.advance();
+            } else {
+                throw new ParseException("Invalid character in string", chars.index);
+            }
+        }
+
+        // Ensure there is a closing double quote
+        if (!peek("\"")) {
+            throw new ParseException("Unterminated string literal", chars.index);
+        }
+        chars.advance();
+
+        return chars.emit(Token.Type.STRING);
+        //throw new UnsupportedOperationException(); //TODO
     }
 
     public void lexEscape() {
-        throw new UnsupportedOperationException(); //TODO
+        // Make sure backslash starts the escape sequence
+        if (!peek("\\\\")) {
+            throw new ParseException("Backslash must appear at beginning of escape sequence", chars.index);
+        }
+        chars.advance();
+
+        // Ensure valid escape character option follows backslash
+        if (peek("[bnrt'\"\\\\]")) {
+            chars.advance();
+        } else {
+            throw new ParseException("Escape sequence is invalid", chars.index);
+        }
+        // throw new UnsupportedOperationException(); //TODO
     }
 
     public Token lexOperator() {
-        throw new UnsupportedOperationException(); //TODO
+        // ==, !=, <=, >=, &&, || -> Multi-character operator handling
+        if (peek("=", "=") || peek("!", "=") || peek("<", "=") || peek(">", "=") || peek("&", "&") || peek("|", "|")) {
+            // Must have 2 advances because these operators come in pairs
+            chars.advance();
+
+            chars.advance();
+
+            return chars.emit(Token.Type.OPERATOR);
+        }
+
+        // Allow and take in single character operators - each character which is not whitespace and not several characters in an operator
+        if (peek("[^\\w\\s]")) {
+
+            chars.advance();
+
+            return chars.emit(Token.Type.OPERATOR);
+        }
+
+        // in case of no operator throw error
+        throw new ParseException("Operator is not valid", chars.index);
+        //throw new UnsupportedOperationException(); //TODO
     }
 
     /**
