@@ -248,28 +248,38 @@ public final class Lexer {
     }
 
     public Token lexOperator() {
-        // ==, !=, <=, >=, &&, || -> Multi-character operator handling
-        if (peek("=", "=") || peek("!", "=") || peek("<", "=") || peek(">", "=") || peek("&", "&") || peek("|", "|")) {
-            // Must have 2 advances because these operators come in pairs
-            chars.advance();
-
-            chars.advance();
-
-            return chars.emit(Token.Type.OPERATOR);
+        // First, check for two-character operators like &&, ||, ==, !=, <=, >=.
+        if (peek("&", "&") || peek("|", "|") || peek("=", "=") || peek("!", "=") || peek("<", "=") || peek(">", "=")) {
+            chars.advance();  // consume the first character
+            chars.advance();  // consume the second character
+            return chars.emit(Token.Type.OPERATOR);  // emit the two-character operator
         }
 
-        // Allow and take in single character operators - each character which is not whitespace and not several characters in an operator
+        // If we encounter a single '&' or '|' we need to check the next character before emitting.
+        if (peek("&") || peek("|")) {
+            char currentChar = chars.get(0);
+            chars.advance();  // move past the first character
+
+            // After encountering a single & or |, if the next character is also & or |, it should be combined.
+            if (chars.has(0) && chars.get(0) == currentChar) {
+                chars.advance();  // move past the second character
+                return chars.emit(Token.Type.OPERATOR);  // emit the two-character operator like '||' or '&&'
+            }
+
+            // If no second & or | follows, emit just the single character operator.
+            return chars.emit(Token.Type.OPERATOR);  // emit single operator like '&' or '|'
+        }
+
+        // If none of the special two-character operators matched, check for any other single operator.
         if (peek("[^\\w\\s]")) {
-
-            chars.advance();
-
-            return chars.emit(Token.Type.OPERATOR);
+            chars.advance();  // consume the single character
+            return chars.emit(Token.Type.OPERATOR);  // emit the single character operator
         }
 
-        // in case of no operator throw error
+        // If nothing matches, throw an exception.
         throw new ParseException("Operator is not valid", chars.index);
-        //throw new UnsupportedOperationException(); //TODO
     }
+
 
     /**
      * Returns true if the next sequence of characters match the given patterns,
