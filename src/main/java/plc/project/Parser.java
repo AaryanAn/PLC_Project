@@ -1,5 +1,6 @@
 package plc.project;
 
+import javax.swing.text.html.Option;
 import java.util.Arrays;
 import java.util.List;
 import java.util.ArrayList;
@@ -350,74 +351,74 @@ public final class Parser {
      * {@code FOR}.
      */
     public Ast.Statement.For parseForStatement() throws ParseException {
-        // Expect FOR
-        match("FOR");
+        Ast.Statement initAST = null;
+        Ast.Expression conAST = null;
+        Ast.Statement incAST = null;
+        List<Ast.Statement> stmAST = new ArrayList<>();
 
-        // Expect (
-        if (!match(Token.Type.OPERATOR, "(")) {
+        // Opening ( parenthesis
+        if (!match("("))
+        {
             throw new ParseException("Expect ( after FOR", tokens.get(0).getIndex());
         }
 
-        // parse initialization if necessary
-        Optional<Ast.Statement> initialization = Optional.empty();
-        if (peek(Token.Type.IDENTIFIER)) {
-            String name = tokens.get(0).getLiteral();
-            match(Token.Type.IDENTIFIER);//parse identifier
+        if (peek(Token.Type.IDENTIFIER, "="))
+        {
+            String strNM = tokens.get(0).getLiteral();
+            tokens.advance();
+            tokens.advance();
 
-            if (!match(Token.Type.OPERATOR, "=")) {
-                throw new ParseException("Expect = after identifier", tokens.get(0).getIndex());
-            }
-            Ast.Expression value = parseExpression();
-            initialization = Optional.of(new Ast.Statement.Assignment(new Ast.Expression.Access(Optional.empty(), name), value));
+
+            Ast.Expression valExprAST = parseExpression();
+            initAST = new Ast.Statement.Declaration(strNM, Optional.ofNullable(valExprAST));
         }
 
         // Expect first ;
-        if (!match(Token.Type.OPERATOR, ";")) {
+        if (!match(";"))
+        {
             throw new ParseException("Expect ; after initialization", tokens.get(0).getIndex());
         }
 
         // Parse loop cond
-        Ast.Expression condition = parseExpression();
+        conAST = parseExpression();
 
         // Second ;
-        if (!match(Token.Type.OPERATOR, ";")) {
+        if (!match(";"))
+        {
             throw new ParseException("Expected ';' after condition", tokens.get(0).getIndex());
         }
 
-        // Parse increm
-        Optional<Ast.Statement> increment = Optional.empty();
-        if (peek(Token.Type.IDENTIFIER)) {
 
-            String name = tokens.get(0).getLiteral();
-
-            // parse identifier
-            match(Token.Type.IDENTIFIER);
-
-            if (!match(Token.Type.OPERATOR, "=")) {
-                throw new ParseException("Expect = after", tokens.get(0).getIndex());
-            }
-            Ast.Expression value = parseExpression();
-            increment = Optional.of(new Ast.Statement.Assignment(new Ast.Expression.Access(Optional.empty(), name), value));
+        if (peek(Token.Type.IDENTIFIER, "="))
+        {
+            Ast.Expression recordAST = parseExpression();
+            tokens.advance();
+            Ast.Expression valAST = parseExpression();
+            incAST = new Ast.Statement.Assignment(recordAST, valAST);
         }
 
+        if (tokens.has(0))
+        {
+            stmAST.add(parseStatement());
+        }
+
+
         // Expect )
-        if (!match(Token.Type.OPERATOR, ")")) {
+        if (!match(")"))
+        {
             throw new ParseException("After increment expect )", tokens.get(0).getIndex());
         }
 
         // Parse loop body
-        List<Ast.Statement> statements = new ArrayList<>();
-        while (!peek("END")) {
-            statements.add(parseStatement());
-        }
-
-        // Expect END to close for loop
-        if (!match("END")) {
+        if(match("END"))
+        {
             throw new ParseException("END expected to close FOR loop", tokens.get(0).getIndex());
         }
 
+
+
         // Parsed FOR return
-        return new Ast.Statement.For(initialization.orElse(null), condition, increment.orElse(null), statements);
+        return new Ast.Statement.For(initAST, conAST, incAST, stmAST);
 
         //throw new UnsupportedOperationException(); //TODO
     }
