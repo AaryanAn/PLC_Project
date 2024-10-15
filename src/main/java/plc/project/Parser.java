@@ -45,7 +45,7 @@ public final class Parser {
             // check for all valid words
 
             //first LET
-            if (peek("LET")) {
+            if (peek("LET") && !finished_method) {
 
                 fields.add(parseField());
 
@@ -59,7 +59,7 @@ public final class Parser {
             } else {
 
                 // Throw parse exception if neither
-                throw new ParseException("Neither LET nor DEF", tokens.get(0).getIndex());
+                throw new ParseException("Neither LET nor DEF", /* tokens.get(0). */getIndex());
             }
         }
 
@@ -95,8 +95,8 @@ public final class Parser {
         }
 
         // Check for IDENTIFIER
-        if (! peek(Token.Type.IDENTIFIER)) {
-            throw new ParseException("Identifier Expected - ", tokens.get(0).getIndex());
+        if (!peek(Token.Type.IDENTIFIER)) {
+            throw new ParseException("Identifier Expected - ", getIndex());
 
         } else {
 
@@ -113,7 +113,7 @@ public final class Parser {
 
         // Throw expression if no semicolon
         if (!match(";")) {
-            throw new ParseException("There is an expected semicolon - ';'", tokens.get(0).getIndex());
+            throw new ParseException("There is an expected semicolon - ';'", getIndex());
         }
 
         return new Ast.Field(strNM, constInStatement, Optional.ofNullable(exprAst));
@@ -175,7 +175,7 @@ public final class Parser {
 
         // Parse parameter list in parentheses
         if (!match("(")) {
-            throw new ParseException("Expected '(' - ", tokens.get(0).getIndex());
+            throw new ParseException("Expected '(' - ", getIndex());
         }
 
         // Check if there are other optional function arguments
@@ -309,7 +309,7 @@ public final class Parser {
         // End semicolon
         if (!match(";"))
         {
-            throw new ParseException("semicolon - ; - expected at end of declaration", tokens.get(0).getIndex());
+            throw new ParseException("semicolon - ; - expected at end of declaration", /* tokens.get(0). */getIndex());
         }
 
         return new Ast.Statement.Declaration(strNM, Optional.ofNullable(exprAST));
@@ -350,10 +350,10 @@ public final class Parser {
 
         }
 
-        // Optional ELSE check
-        if (tokens.has(1) && match("ELSE")) {
-            stmElse.add(parseStatement());
-        }
+//        // Optional ELSE check
+//        if (tokens.has(1) && match("ELSE")) {
+//            stmElse.add(parseStatement());
+//        }
 
 
         // END to finish
@@ -383,7 +383,7 @@ public final class Parser {
         // Opening ( parenthesis
         if (!match("("))
         {
-            throw new ParseException("Expect ( after FOR", /* tokens.get(0). */getIndex());
+            throw new ParseException("Expect ( after FOR", getIndex());
         }
 
         if (peek(Token.Type.IDENTIFIER, "="))
@@ -404,7 +404,7 @@ public final class Parser {
         // Expect first ;
         if (!match(";"))
         {
-            throw new ParseException("Expect ; after initialization", /* tokens.get(0). */getIndex());
+            throw new ParseException("Expect ; after initialization", getIndex());
         }
 
         // Parse loop cond
@@ -413,7 +413,7 @@ public final class Parser {
         // Second ;
         if (!match(";"))
         {
-            throw new ParseException("Expected ';' after condition", /* tokens.get(0). */getIndex());
+            throw new ParseException("Expected ';' after condition", getIndex());
         }
 
 
@@ -425,16 +425,16 @@ public final class Parser {
             incAST = new Ast.Statement.Assignment(recordAST, valAST);
         }
 
-        if (tokens.has(0))
-        {
-            stmAST.add(parseStatement());
-        }
+//        if (tokens.has(0))
+//        {
+//            stmAST.add(parseStatement());
+//        }
 
 
         // Expect )
         if (!match(")"))
         {
-            throw new ParseException("After increment expect )", /* tokens.get(0). */getIndex());
+            throw new ParseException("After increment expect )", getIndex());
         }
 
         while (!peek("END")) {
@@ -445,7 +445,7 @@ public final class Parser {
         // Parse loop body
         if(!match("END"))
         {
-            throw new ParseException("END expected to close FOR loop", /* tokens.get(0). */getIndex());
+            throw new ParseException("END expected to close FOR loop", getIndex());
         }
 
 
@@ -539,18 +539,15 @@ public final class Parser {
      * Parses the {@code logical-expression} rule.
      */
     public Ast.Expression parseLogicalExpression() throws ParseException {
-        Ast.Expression left = parseEqualityExpression(); // parse left
+        Ast.Expression left = parseEqualityExpression(); // Parse left
 
         while (peek("&&") || peek("||")) {
             String operator = tokens.get(0).getLiteral();
             tokens.advance();
-            Ast.Expression.Binary tpAST = new Ast.Expression.Binary(operator, left, parseEqualityExpression());
-
-            left = tpAST;
+            left = new Ast.Expression.Binary(operator, left, parseEqualityExpression());
         }
 
         return left;
-        //throw new UnsupportedOperationException(); //TODO
     }
 
     /**
@@ -559,16 +556,13 @@ public final class Parser {
     public Ast.Expression parseEqualityExpression() throws ParseException {
         Ast.Expression left = parseAdditiveExpression();
 
-        while(peek("!=")||peek("==")||peek("<=")||peek(">")||peek(">=")||peek("<"))
-        {
+        while (peek("!=") || peek("==") || peek("<=") || peek(">") || peek(">=") || peek("<")) {
             String operator = tokens.get(0).getLiteral();
             tokens.advance();
-            Ast.Expression.Binary right = new Ast.Expression.Binary(operator, left, parseAdditiveExpression());
-            left = right;
+            left = new Ast.Expression.Binary(operator, left, parseAdditiveExpression());
         }
 
         return left;
-        //throw new UnsupportedOperationException(); //TODO
     }
 /////////////HEREHREHREHREHRHERHERHEHREHREHREHREHRHEHREHREHREHRHERHERHERHERHEHREHREHREHREHREHRHEREHRHERHERHE
     /**
@@ -577,18 +571,13 @@ public final class Parser {
     public Ast.Expression parseAdditiveExpression() throws ParseException {
         Ast.Expression left = parseMultiplicativeExpression();
 
-        while (match("+") || match("-")) {
+        while (peek("+") || peek("-")) {
             String operator = tokens.get(0).getLiteral();
             tokens.advance();
-            Ast.Expression.Binary hold = new Ast.Expression.Binary(operator, left, parseMultiplicativeExpression());
-
-            left = hold;
-//            Ast.Expression right = parseMultiplicativeExpression();
-//            left = new Ast.Expression.Binary(operator, left, right);
+            left = new Ast.Expression.Binary(operator, left, parseMultiplicativeExpression());
         }
 
         return left;
-        // throw new UnsupportedOperationException(); //TODO
     }
 
     /**
@@ -597,20 +586,13 @@ public final class Parser {
     public Ast.Expression parseMultiplicativeExpression() throws ParseException {
         Ast.Expression left = parseSecondaryExpression();
 
-        while (match("*") || match("/")) {
+        while (peek("*") || peek("/")) {
             String operator = tokens.get(0).getLiteral();
             tokens.advance();
-
-//            Ast.Expression right = parseSecondaryExpression();
-
-            Ast.Expression.Binary hold = new Ast.Expression.Binary(operator, left, parseSecondaryExpression());
-
-//            left = new Ast.Expression.Binary(operator, left, right);
-            left = hold;
+            left = new Ast.Expression.Binary(operator, left, parseSecondaryExpression());
         }
-        return left;
 
-        //throw new UnsupportedOperationException(); //TODO
+        return left;
     }
 
     /**
@@ -643,12 +625,12 @@ public final class Parser {
                 while (tokens.has(0) && !peek(")")) {
                     args.add(parseExpression());
                     if (!peek(")") && !peek(",")) {
-                        throw new ParseException("There should be a comma/END of func - ", tokens.get(0).getIndex());
+                        throw new ParseException("There should be a comma/END of func - ", /* tokens.get(0). */getIndex());
                     }
 
                     if (match(",")) {
                         if (peek(")")) {
-                            throw new ParseException("There is an expreesion expected after the comma - ", tokens.get(0).getIndex());
+                            throw new ParseException("There is an expreesion expected after the comma - ", /* tokens.get(0). */getIndex());
                         }
                     }
                 }
@@ -664,7 +646,7 @@ public final class Parser {
                 expression = hold;
             }
         }
-        throw new ParseException("The end of the expression expected - ", tokens.get(0).getIndex());
+        throw new ParseException("The end of the expression expected - ", /* tokens.get(0). */getIndex());
 
         // throw new UnsupportedOperationException(); //TODO
     }
@@ -680,9 +662,9 @@ public final class Parser {
         if (match("NIL")) {
             return new Ast.Expression.Literal(null);
         } else if (match("TRUE")) {
-            return new Ast.Expression.Literal(true);
+            return new Ast.Expression.Literal(Boolean.TRUE);
         } else if (match("FALSE")) {
-            return new Ast.Expression.Literal(false);
+            return new Ast.Expression.Literal(Boolean.FALSE);
         } else if (peek(Token.Type.INTEGER)) {
             BigInteger bigIntValue = new BigInteger(tokens.get(0).getLiteral());
             tokens.advance();
