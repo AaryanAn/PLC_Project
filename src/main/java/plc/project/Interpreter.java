@@ -50,8 +50,8 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
             visit(ast.getMethods().get(i));
         }
         //mafu == prifun
-        Environment.Function primaryFunction = scope.lookupFunction("Primary", 0);
-        return primaryFunction.invoke(List.of());
+        Environment.Function mainFunc = scope.lookupFunction("main", 0);
+        return mainFunc.invoke(List.of());
 
 
 
@@ -172,6 +172,15 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
                 for (int i=0; i<ast.getThenStatements().size();i++)
                 {
                     visit(ast.getThenStatements().get(i));
+                }
+
+            }
+            else
+            {
+                for (int i=0;i<ast.getElseStatements().size();i++)
+                {
+
+                    visit(ast.getElseStatements().get(i));
                 }
             }
 
@@ -437,7 +446,7 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
 
                 BigInteger holdGVRight = (BigInteger) holdRight.getValue();
 
-                return Environment.create(holdGVLeft.compareTo(holdGVRight)<=0);
+                return Environment.create(holdGVLeft.compareTo(holdGVRight)>=0);
             }
             else if (holdLeft.getValue() instanceof BigDecimal)
             {
@@ -445,7 +454,7 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
 
                 BigDecimal holdGVRight = (BigDecimal) holdRight.getValue();
 
-                return Environment.create(holdGVLeft.compareTo(holdGVRight)<=0);
+                return Environment.create(holdGVLeft.compareTo(holdGVRight)>=0);
             }
             else if (holdLeft.getValue() instanceof Character)
             {
@@ -453,7 +462,7 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
 
                 Character holdGVRight = (Character) holdRight.getValue();
 
-                return Environment.create(holdGVLeft.compareTo(holdGVRight)<=0);
+                return Environment.create(holdGVLeft.compareTo(holdGVRight)>=0);
             }
             else if (holdLeft.getValue() instanceof String)
             {
@@ -461,7 +470,15 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
 
                 String holdGVRight = (String) holdRight.getValue();
 
-                return Environment.create(holdGVLeft.compareTo(holdGVRight)<=0);
+                return Environment.create(holdGVLeft.compareTo(holdGVRight)>=0);
+            }
+            else if (holdLeft.getValue() instanceof Boolean)
+            {
+                Boolean holdGVLeft = (Boolean) holdLeft.getValue();
+
+                Boolean holdGVRight = (Boolean) holdRight.getValue();
+
+                return Environment.create(holdGVLeft.compareTo(holdGVRight)>=0);
             }
             else
             {
