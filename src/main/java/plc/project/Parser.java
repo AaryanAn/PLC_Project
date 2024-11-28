@@ -288,83 +288,162 @@ public final class Parser {
      * method should only be called if the next tokens start a declaration
      * statement, aka {@code LET}.
      */
+//    public Ast.Statement.Declaration parseDeclarationStatement() throws ParseException {
+//        String strNM = "";
+//        Ast.Expression exprAST = null;
+//
+//        // Parse variable name identifier
+//        if (!peek(Token.Type.IDENTIFIER)) {
+//            throw new ParseException("Identifier expected after LET", /* tokens.get(0). */getIndex());
+//        } else{
+//            strNM = tokens.get(0).getLiteral();
+//            tokens.advance();
+//        }
+//
+//        if (tokens.has(1) && peek("="))
+//        {
+//            tokens.advance();
+//            exprAST = parseExpression();
+//        }
+//
+//        // End semicolon
+//        if (!match(";"))
+//        {
+//            throw new ParseException("semicolon - ; - expected at end of declaration", /* tokens.get(0). */getIndex());
+//        }
+//
+//        return new Ast.Statement.Declaration(strNM, Optional.ofNullable(exprAST));
+//
+//        //throw new UnsupportedOperationException(); //TODO
+//    }
     public Ast.Statement.Declaration parseDeclarationStatement() throws ParseException {
         String strNM = "";
+        Optional<String> type = Optional.empty();
         Ast.Expression exprAST = null;
 
         // Parse variable name identifier
         if (!peek(Token.Type.IDENTIFIER)) {
-            throw new ParseException("Identifier expected after LET", /* tokens.get(0). */getIndex());
-        } else{
+            throw new ParseException("Identifier expected after LET", getIndex());
+        } else {
             strNM = tokens.get(0).getLiteral();
             tokens.advance();
         }
 
-        if (tokens.has(1) && peek("="))
-        {
-            tokens.advance();
+        // Check for optional type after `:`
+        if (peek(":")) {
+            tokens.advance(); // Consume the `:`
+            if (!peek(Token.Type.IDENTIFIER)) {
+                throw new ParseException("Type identifier expected after ':'", getIndex());
+            }
+            type = Optional.of(tokens.get(0).getLiteral());
+            tokens.advance(); // Consume the type
+        }
+
+        // Optional assignment
+        if (peek("=")) {
+            tokens.advance(); // Consume the `=`
             exprAST = parseExpression();
         }
 
         // End semicolon
-        if (!match(";"))
-        {
-            throw new ParseException("semicolon - ; - expected at end of declaration", /* tokens.get(0). */getIndex());
+        if (!match(";")) {
+            throw new ParseException("semicolon - ; - expected at end of declaration", getIndex());
         }
 
-        return new Ast.Statement.Declaration(strNM, Optional.ofNullable(exprAST));
-
-        //throw new UnsupportedOperationException(); //TODO
+        return new Ast.Statement.Declaration(strNM, type, Optional.ofNullable(exprAST));
     }
+
 
     /**
      * Parses an if statement from the {@code statement} rule. This method
      * should only be called if the next tokens start an if statement, aka
      * {@code IF}.
      */
+//    public Ast.Statement.If parseIfStatement() throws ParseException {
+//        Ast.Expression conAST = null;
+//        List<Ast.Statement> stmThen = new ArrayList<>();
+//
+//        List<Ast.Statement> stmElse = new ArrayList<>();
+//
+//        if (tokens.has(0)) {
+//
+//            conAST = parseExpression();
+//
+//        }
+//
+//        // Expect DO
+//        if (!match("DO")) {
+//
+//            throw new ParseException("DO expected after IF condition", /* tokens.get(0). */getIndex());
+//        }
+//
+////        if (tokens.has(0)) {
+////            stmThen.add(parseStatement());
+////        }
+//
+//        while (!peek("ELSE") && !peek("END") ) {
+//
+//            stmThen.add(parseStatement());
+//
+//        }
+//
+////        // Optional ELSE check
+////        if (tokens.has(1) && match("ELSE")) {
+////            stmElse.add(parseStatement());
+////        }
+//
+//
+//        // END to finish
+//        if (!match("END")) {
+//            throw new ParseException("Expect END to close IF", /*tokens.get(0).*/getIndex());
+//        }
+//
+//        return new Ast.Statement.If(conAST, stmThen, stmElse);
+//
+//
+//        //throw new UnsupportedOperationException(); //TODO
+//    }
     public Ast.Statement.If parseIfStatement() throws ParseException {
-        Ast.Expression conAST = null;
-        List<Ast.Statement> stmThen = new ArrayList<>();
+        System.out.println("Parsing IF statement...");
+        Ast.Expression condition = parseExpression(); // Parse the condition
 
-        List<Ast.Statement> stmElse = new ArrayList<>();
-
-        if (tokens.has(0)) {
-
-            conAST = parseExpression();
-
-        }
-
-        // Expect DO
+        // Expect 'DO'
         if (!match("DO")) {
 
-            throw new ParseException("DO expected after IF condition", /* tokens.get(0). */getIndex());
+            throw new ParseException("DO expected after IF condition", getIndex());
         }
 
-//        if (tokens.has(0)) {
-//            stmThen.add(parseStatement());
-//        }
+        // Parse 'then' block statements
+        List<Ast.Statement> thenStatements = new ArrayList<>();
+        while (!peek("ELSE") && !peek("END")) {
 
-        while (!peek("ELSE") && !peek("END") ) {
+            thenStatements.add(parseStatement());
+        }
 
-            stmThen.add(parseStatement());
+        // Parse optional 'ELSE' block
+        List<Ast.Statement> elseStatements = new ArrayList<>();
+
+
+        if (match("ELSE")) {
+
+            while (!peek("END")) {
+                elseStatements.add(parseStatement());
+
+            }
 
         }
 
-//        // Optional ELSE check
-//        if (tokens.has(1) && match("ELSE")) {
-//            stmElse.add(parseStatement());
-//        }
-
-
-        // END to finish
+        // Expect 'END'
         if (!match("END")) {
-            throw new ParseException("Expect END to close IF", /*tokens.get(0).*/getIndex());
+            throw new ParseException("Expect END to close IF", getIndex());
+
+
         }
 
-        return new Ast.Statement.If(conAST, stmThen, stmElse);
+        System.out.println("Successfully parsed IF statement.");
 
+        return new Ast.Statement.If(condition, thenStatements, elseStatements);
 
-        //throw new UnsupportedOperationException(); //TODO
     }
 
 

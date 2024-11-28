@@ -20,19 +20,22 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
             return Environment.NIL;
         });
 
-        scope.defineFunction("log", 1, args->{
-            if (!(args.get(0).getValue() instanceof  BigDecimal)) {
-                throw new RuntimeException("The BigDecimal Type was expected" +
-                args.get(0).getValue().getClass().getName()+".");
+        scope.defineFunction("log", 1, args -> {
+            Object value = args.get(0).getValue();
+
+            // Convert BigInteger to BigDecimal if necessary
+            if (value instanceof BigInteger) {
+                value = new BigDecimal((BigInteger) value);
             }
-            BigDecimal firstBigDecimal = (BigDecimal) args.get(0).getValue();
 
-            BigDecimal secondBigDecimal = requireType(BigDecimal.class, Environment.create(args.get(0).getValue()));
+            if (!(value instanceof BigDecimal)) {
+                throw new RuntimeException("The BigDecimal Type was expected but received " + value.getClass().getName() + ".");
+            }
 
-            BigDecimal bigDecimalResult = BigDecimal.valueOf(Math.log(secondBigDecimal.doubleValue()));
+            BigDecimal input = (BigDecimal) value;
+            BigDecimal result = BigDecimal.valueOf(Math.log(input.doubleValue()));
 
-            return Environment.create(bigDecimalResult);
-
+            return Environment.create(result);
         });
     }
 
