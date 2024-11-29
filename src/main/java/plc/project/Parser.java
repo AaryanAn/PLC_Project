@@ -76,48 +76,101 @@ public final class Parser {
      * next tokens start a field, aka {@code LET}.
      */
     public Ast.Field parseField() throws ParseException {
-        // first we declare empty string - strNM
+        // First we declare an empty string for the field name - strNM
         String strNM = "";
 
         // Then we can have a boolean to track whether there is a constant
         boolean constInStatement = false;
 
-        // we define an expression for expression variables to null
+        // We define an expression for initialization to null
         Ast.Expression exprAst = null;
 
+        // Advance the token stream to process the field declaration
         tokens.advance();
 
-        // Check for keyword CONST and flip value if detected
-        if (peek("CONST")){
+        // Check for keyword CONST and flip the value if detected
+        if (peek("CONST")) {
             constInStatement = true;
-
             tokens.advance();
         }
 
-        // Check for IDENTIFIER
+        // Check for IDENTIFIER (field name)
         if (!peek(Token.Type.IDENTIFIER)) {
             throw new ParseException("Identifier Expected - ", getIndex());
-
         } else {
-
             strNM = tokens.get(0).getLiteral();
-
             tokens.advance();
         }
 
-        // IF = is present, then parse initialization expression
+        // Check for optional type declaration indicated by ':'
+        Optional<String> type = Optional.empty();
+        if (peek(":")) {
+            tokens.advance(); // Consume ':'
+            if (!peek(Token.Type.IDENTIFIER)) {
+                throw new ParseException("Type identifier expected after ':'", getIndex());
+            }
+            type = Optional.of(tokens.get(0).getLiteral());
+            tokens.advance(); // Consume the type identifier
+        }
+
+        // If '=' is present, parse the initialization expression
         if (peek("=")) {
             tokens.advance();
             exprAst = parseExpression();
         }
 
-        // Throw expression if no semicolon
+        // Throw an error if no semicolon is present at the end of the declaration
         if (!match(";")) {
             throw new ParseException("There is an expected semicolon - ';'", getIndex());
         }
 
-        return new Ast.Field(strNM, constInStatement, Optional.ofNullable(exprAst));
+        // Return the parsed field with its name, constant status, type, and initializer
+        return new Ast.Field(strNM, type.orElse(null), constInStatement, Optional.ofNullable(exprAst));
     }
+
+//    public Ast.Field parseField() throws ParseException {
+//        // first we declare empty string - strNM
+//        String strNM = "";
+//
+//        // Then we can have a boolean to track whether there is a constant
+//        boolean constInStatement = false;
+//
+//        // we define an expression for expression variables to null
+//        Ast.Expression exprAst = null;
+//
+//        tokens.advance();
+//
+//        // Check for keyword CONST and flip value if detected
+//        if (peek("CONST")){
+//            constInStatement = true;
+//
+//            tokens.advance();
+//        }
+//
+//        // Check for IDENTIFIER
+//        if (!peek(Token.Type.IDENTIFIER)) {
+//            throw new ParseException("Identifier Expected - ", getIndex());
+//
+//        } else {
+//
+//            strNM = tokens.get(0).getLiteral();
+//
+//            tokens.advance();
+//        }
+//
+//        // IF = is present, then parse initialization expression
+//        if (peek("=")) {
+//            tokens.advance();
+//            exprAst = parseExpression();
+//        }
+//
+//        // Throw expression if no semicolon
+//        if (!match(";")) {
+//            throw new ParseException("There is an expected semicolon - ';'", getIndex());
+//        }
+//
+//        return new Ast.Field(strNM, constInStatement, Optional.ofNullable(exprAst));
+//    }
 
 
         //FIRST IMPLEMENTATION
@@ -153,78 +206,157 @@ public final class Parser {
      * next tokens start a method, aka {@code DEF}.
      */
     public Ast.Method parseMethod() throws ParseException {
-        // first we declare empty string - strNM
-        String strNM = "";
+        // Declare a string to store the method name
+        String methodName = "";
 
-        // We create a list of the parameters which will be passed
+        // Create a list of the parameters that will be passed
         List<String> parameters = new ArrayList<>();
 
-        // We create a list of AST statements which will be kept track of
-        List<Ast.Statement> stmAST = new ArrayList<>();
+        // Create a list of parameter type names, defaulting to "Any"
+        List<String> parameterTypeNames = new ArrayList<>();
 
+        // Create a list of AST statements to keep track of the method body
+        List<Ast.Statement> statements = new ArrayList<>();
+
+        // Create an Optional to hold the return type
+        Optional<String> returnType = Optional.empty();
+
+        // Advance past the "DEF" keyword
         tokens.advance();
 
-        // Parse method identifier
+        // Parse the method identifier
         if (!peek(Token.Type.IDENTIFIER)) {
-            throw new ParseException("Method name was expected", getIndex());
+            throw new ParseException("Method name expected", getIndex());
         }
-
-        strNM = tokens.get(0).getLiteral();
-
+        methodName = tokens.get(0).getLiteral();
         tokens.advance();
 
-        // Parse parameter list in parentheses
+        // Parse the parameter list enclosed in parentheses
         if (!match("(")) {
-            throw new ParseException("Expected '(' - ", getIndex());
+            throw new ParseException("Expected '(' after method name", getIndex());
         }
 
-        // Check if there are other optional function arguments
-        // Then add arguments to parameters if needed
+        // Parse optional parameters and initialize their types to "Any"
         if (peek(Token.Type.IDENTIFIER)) {
-
             parameters.add(tokens.get(0).getLiteral());
-
+            parameterTypeNames.add("Any"); // Default type for parameters
             tokens.advance();
+
+            // Parse additional parameters if present, separated by commas
             while (peek(",", Token.Type.IDENTIFIER)) {
-                parameters.add(tokens.get(1).getLiteral());
+                tokens.advance(); // Consume the ',' token
+                parameters.add(tokens.get(0).getLiteral());
+                parameterTypeNames.add("Any"); // Default type for parameters
                 tokens.advance();
-                tokens.advance();
-                // twice accounting for ,
             }
         }
 
+        // Check for the closing parenthesis
         if (!match(")")) {
-
-            throw new ParseException("')' expected", getIndex());
+            throw new ParseException("Expected ')' after parameters", getIndex());
         }
-        // Expect DO keyword
+
+        // Parse the optional return type after the colon ':'
+        if (match(":")) {
+            if (!peek(Token.Type.IDENTIFIER)) {
+                throw new ParseException("Return type expected after ':'", getIndex());
+            }
+            returnType = Optional.of(tokens.get(0).getLiteral());
+            tokens.advance();
+        }
+
+        // Expect the "DO" keyword to begin the method body
         if (!match("DO")) {
-
-            throw new ParseException("'DO' Expected", getIndex());
+            throw new ParseException("'DO' expected", getIndex());
         }
 
-        // Statement check
-
-        // nums of statements
-        while(!peek("END")) {
-            stmAST.add(parseStatement());
+        // Parse statements until the "END" keyword is encountered
+        while (!peek("END")) {
+            statements.add(parseStatement());
         }
-//        if (tokens.has(1) && (!peek("END")))
-//        {
-//            stmAST.add(parseStatement());
-//        }
-//        else {throw new ParseException("There was a Statement expected", tokens.get(0).getIndex());}
 
-
-        // Lastly expect END
+        // Check for the "END" keyword to close the method body
         if (!match("END")) {
             throw new ParseException("'END' expected", getIndex());
         }
 
-        // Parsed method return
-        return new Ast.Method(strNM, parameters, stmAST);
-        //throw new UnsupportedOperationException(); //TODO
+        // Return the constructed Ast.Method object
+        return new Ast.Method(methodName, parameters, parameterTypeNames, returnType, statements);
     }
+
+//    public Ast.Method parseMethod() throws ParseException {
+//        // first we declare empty string - strNM
+//        String strNM = "";
+//
+//        // We create a list of the parameters which will be passed
+//        List<String> parameters = new ArrayList<>();
+//
+//        // We create a list of AST statements which will be kept track of
+//        List<Ast.Statement> stmAST = new ArrayList<>();
+//
+//        tokens.advance();
+//
+//        // Parse method identifier
+//        if (!peek(Token.Type.IDENTIFIER)) {
+//            throw new ParseException("Method name was expected", getIndex());
+//        }
+//
+//        strNM = tokens.get(0).getLiteral();
+//
+//        tokens.advance();
+//
+//        // Parse parameter list in parentheses
+//        if (!match("(")) {
+//            throw new ParseException("Expected '(' - ", getIndex());
+//        }
+//
+//        // Check if there are other optional function arguments
+//        // Then add arguments to parameters if needed
+//        if (peek(Token.Type.IDENTIFIER)) {
+//
+//            parameters.add(tokens.get(0).getLiteral());
+//
+//            tokens.advance();
+//            while (peek(",", Token.Type.IDENTIFIER)) {
+//                parameters.add(tokens.get(1).getLiteral());
+//                tokens.advance();
+//                tokens.advance();
+//                // twice accounting for ,
+//            }
+//        }
+//
+//        if (!match(")")) {
+//
+//            throw new ParseException("')' expected", getIndex());
+//        }
+//        // Expect DO keyword
+//        if (!match("DO")) {
+//
+//            throw new ParseException("'DO' Expected", getIndex());
+//        }
+//
+//        // Statement check
+//
+//        // nums of statements
+//        while(!peek("END")) {
+//            stmAST.add(parseStatement());
+//        }
+////        if (tokens.has(1) && (!peek("END")))
+////        {
+////            stmAST.add(parseStatement());
+////        }
+////        else {throw new ParseException("There was a Statement expected", tokens.get(0).getIndex());}
+//
+//
+//        // Lastly expect END
+//        if (!match("END")) {
+//            throw new ParseException("'END' expected", getIndex());
+//        }
+//
+//        // Parsed method return
+//        return new Ast.Method(strNM, parameters, stmAST);
+//        //throw new UnsupportedOperationException(); //TODO
+//    }
 
     /**
      * Parses the {@code statement} rule and delegates to the necessary method.
