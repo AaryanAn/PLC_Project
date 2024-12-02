@@ -284,6 +284,7 @@ public final class Parser {
         return new Ast.Method(methodName, parameters, parameterTypeNames, returnType, statements);
     }
 
+
 //    public Ast.Method parseMethod() throws ParseException {
 //        // first we declare empty string - strNM
 //        String strNM = "";

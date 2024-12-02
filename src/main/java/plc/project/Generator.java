@@ -1,8 +1,7 @@
 package plc.project;
 
 import java.io.PrintWriter;
-import java.math.BigDecimal;
-import java.math.BigInteger;
+
 
 public final class Generator implements Ast.Visitor<Void> {
 
@@ -30,437 +29,350 @@ public final class Generator implements Ast.Visitor<Void> {
         }
     }
 
-//    @Override
-//    public Void visit(Ast.Source ast) {
-//        throw new UnsupportedOperationException(); //TODO
-//    }
-
     @Override
     public Void visit(Ast.Source ast) {
-        // Generate the class header
         print("public class Main {");
-        newline(0); // Empty line
-
-        // Generate fields
-        for (Ast.Field field : ast.getFields()) {
-            newline(1); // Indent fields at level 1
-            visit(field);
-        }
-
-        // Add the static main method
-        newline(0); // Empty line before main
-        newline(1); // Indent main method at level 1
-        print("public static void main(String[] args) {");
-        newline(2); // Increase indentation for the method body
-        print("System.exit(new Main().main());");
-        newline(1); // Closing brace for main method
-        print("}");
-
-        // Generate methods
-        for (Ast.Method method : ast.getMethods()) {
-            newline(0); // Empty line between methods
-            newline(1); // Indent methods at level 1
-            visit(method);
-        }
-
-        // Generate the closing brace for the class
         newline(0);
+        indent++;
+
+        // Fields
+        for (Ast.Field field : ast.getFields()) {
+
+            newline(indent);
+            visit(field);
+
+        }
+        if (!ast.getFields().isEmpty()) {
+
+            newline(0);
+            // add one blank line after the fields
+        }
+
+
+        newline(indent);
+
+        print("public static void main(String[] args) {");
+
+        indent++;
+
+        newline(indent);
+
+        print("System.exit(new Main().main());");
+
+        indent--;
+
+        newline(indent);
+
         print("}");
 
-        return null; // Void return
+        newline(0);
+
+
+        // Methods
+
+        for (Ast.Method method : ast.getMethods()) {
+
+            newline(indent);
+
+            visit(method);
+
+        }
+
+        indent--;
+        newline(indent);
+        print("\n}");
+
+        return null;
     }
 
 
 
-//    @Override
-//    public Void visit(Ast.Field ast) {
-//        throw new UnsupportedOperationException(); //TODO
-//    }
-
     @Override
     public Void visit(Ast.Field ast) {
-        // Add indentation for fields
-        newline(1);
-
-        // Generate constant modifier if applicable
         if (ast.getConstant()) {
+
             print("final ");
+
         }
+        print(getTypeName(ast.getTypeName()), " ", ast.getName());
 
-        // Generate type and name
-        print(ast.getTypeName(), " ", ast.getName());
-
-        // Generate value if present
         if (ast.getValue().isPresent()) {
             print(" = ");
             visit(ast.getValue().get());
         }
-
-        // End the field declaration
         print(";");
-
-        return null; // Void return
+        return null;
     }
 
-//    @Override
-//    public Void visit(Ast.Method ast) {
-//        throw new UnsupportedOperationException(); //TODO
-//    }
     @Override
     public Void visit(Ast.Method ast) {
-        // Add a blank line before the method for readability
-        newline(0);
-
-        // Generate method signature
-        print(ast.getReturnTypeName().orElse("void"), " ", ast.getName(), "(");
-
-        // Generate parameters
+        print(getTypeName(ast.getReturnTypeName().orElse("void")), " ", ast.getName(), "(");
         for (int i = 0; i < ast.getParameters().size(); i++) {
             if (i > 0) {
+
                 print(", ");
             }
-            print(ast.getParameterTypeNames().get(i), " ", ast.getParameters().get(i));
+            print(getTypeName(ast.getParameterTypeNames().get(i)), " ", ast.getParameters().get(i));
         }
         print(") {");
 
-        // Handle method body
-        if (!ast.getStatements().isEmpty()) {
-            indent++; // Increase indentation for method body
-            for (Ast.Statement statement : ast.getStatements()) {
-                newline(indent);
-                visit(statement);
-            }
-            indent--; // Restore original indentation
-            newline(indent); // Prepare for closing brace
+        indent++;
+        for (Ast.Statement statement : ast.getStatements()) {
+            newline(indent);
+            visit(statement);
         }
-
-        // Close method
+        indent--;
+        newline(indent);
         print("}");
-
-        // Add a blank line after the method for readability
-        newline(0);
-
-        return null; // Void return
+        return null;
     }
-
-//    @Override
-//    public Void visit(Ast.Statement.Expression ast) {
-//        throw new UnsupportedOperationException(); //TODO
-//    }
 
     @Override
     public Void visit(Ast.Statement.Expression ast) {
-        // Generate the expression statement
-        newline(indent); // Add a new line with the current indentation
-        visit(ast.getExpression()); // Visit the expression part of the statement
-        print(";"); // Append the semicolon
-        return null; // Void return
+        visit(ast.getExpression());
+        print(";");
+        return null;
     }
-
-
-//    @Override
-//    public Void visit(Ast.Statement.Declaration ast) {
-//        throw new UnsupportedOperationException(); //TODO
-//    }
 
     @Override
     public Void visit(Ast.Statement.Declaration ast) {
-        // Add a new line with the current indentation
-        newline(indent);
-
-        // Print the type and name of the variable
-        print(ast.getVariable().getType().getJvmName(), " ", ast.getVariable().getJvmName());
-
-        // Check for an initialization value
+        print(getTypeName(ast.getVariable().getType().getJvmName()), " ", ast.getVariable().getJvmName());
         if (ast.getValue().isPresent()) {
-            print(" = "); // Add the equals sign with spaces
-            visit(ast.getValue().get()); // Generate the value expression
+            print(" = ");
+            visit(ast.getValue().get());
         }
-
-        // Append the semicolon at the end
         print(";");
-
-        return null; // Void return
+        return null;
     }
-
-//    @Override
-//    public Void visit(Ast.Statement.Assignment ast) {
-//        throw new UnsupportedOperationException(); //TODO
-//    }
 
     @Override
     public Void visit(Ast.Statement.Assignment ast) {
-        // Add a new line with the current indentation
-        newline(indent);
-
-        // Generate the left-hand side (receiver)
         visit(ast.getReceiver());
-
-        // Add the assignment operator
         print(" = ");
-
-        // Generate the right-hand side (value)
         visit(ast.getValue());
-
-        // Append the semicolon
         print(";");
-
-        return null; // Void return
+        return null;
     }
-
-//    @Override
-//    public Void visit(Ast.Statement.If ast) {
-//        throw new UnsupportedOperationException(); //TODO
-//    }
 
     @Override
     public Void visit(Ast.Statement.If ast) {
-        // Start with the `if` keyword and the condition
-        newline(indent);
         print("if (");
         visit(ast.getCondition());
         print(") {");
-
-        // Generate the "then" block
         indent++;
         for (Ast.Statement statement : ast.getThenStatements()) {
             newline(indent);
             visit(statement);
         }
         indent--;
-
-        // Close the "then" block
         newline(indent);
         print("}");
-
-        // Handle the "else" block if present
         if (!ast.getElseStatements().isEmpty()) {
-            newline(indent);
-            print("else {");
-
+            print(" else {");
             indent++;
             for (Ast.Statement statement : ast.getElseStatements()) {
                 newline(indent);
                 visit(statement);
             }
             indent--;
-
-            // Close the "else" block
             newline(indent);
             print("}");
         }
-
-        return null; // Void return
+        return null;
     }
-//
-//    @Override
-//    public Void visit(Ast.Statement.For ast) {
-//        throw new UnsupportedOperationException(); //TODO
-//    }
 
     @Override
     public Void visit(Ast.Statement.For ast) {
-        // Start the for loop signature
-        newline(indent);
-        print("for (");
+        print("for ( ");
 
-        // Generate initialization (optional)
+        // Handle initialization
         if (ast.getInitialization() != null) {
             visit(ast.getInitialization());
+        } else {
+            print(";"); // Print an empty semicolon for missing initialization
         }
-        print("; ");
 
-        // Generate condition (optional)
+        // Handle condition
+        print(" ");
         if (ast.getCondition() != null) {
             visit(ast.getCondition());
         }
-        print("; ");
+        print(";");
 
-        // Generate increment (optional)
+//        // Handle increment
+//        if (ast.getIncrement() != null) {
+//            print(" ");
+//            visit(ast.getIncrement()); // extra semicolon issue at end is here because getincrement places one
+//        } else {
+//            print(" "); // If there is no final condition for increment still put a space
+//        }
+
+        // Handle increment
         if (ast.getIncrement() != null) {
-            visit(ast.getIncrement());
+            print(" ");
+            if (ast.getIncrement() instanceof Ast.Statement.Assignment) {
+                // Assignment handling
+                Ast.Statement.Assignment reassignCast = (Ast.Statement.Assignment) ast.getIncrement();
+                visit(reassignCast.getReceiver()); // Reciever Visit
+                print(" = ");
+                visit(reassignCast.getValue()); // Value visit
+            } else {
+                visit(ast.getIncrement());
+            }
+            print(" ");
+        } else {
+            print(" "); // Missing increment should still have space
         }
-        print(") {");
 
-        // Generate the loop body
+
+        print(") {"); // close loop
+
+        // Loop body
         indent++;
         for (Ast.Statement statement : ast.getStatements()) {
             newline(indent);
+
+            // change print to "System.out.println"
+            if (statement instanceof Ast.Statement.Expression) {
+                Ast.Statement.Expression exprStmt = (Ast.Statement.Expression) statement;
+                if (exprStmt.getExpression() instanceof Ast.Expression.Function) {
+                    Ast.Expression.Function functionExpr = (Ast.Expression.Function) exprStmt.getExpression();
+                    if ("print".equals(functionExpr.getName())) {
+                        print("System.out.println(");
+                        for (int i = 0; i < functionExpr.getArguments().size(); i++) {
+                            visit(functionExpr.getArguments().get(i));
+                            if (i < functionExpr.getArguments().size() - 1) {
+                                print(", ");
+                            }
+                        }
+                        print(");");
+                        continue;
+                    }
+                }
+            }
             visit(statement);
+            // other statements visit
         }
         indent--;
 
-        // Close the loop
+// end loop
         newline(indent);
         print("}");
-
-        return null; // Void return
+        return null;
     }
 
 
-//    @Override
-//    public Void visit(Ast.Statement.While ast) {
-//        throw new UnsupportedOperationException(); //TODO
-//    }
 
     @Override
     public Void visit(Ast.Statement.While ast) {
-        // Start the while loop with condition
-        newline(indent);
         print("while (");
         visit(ast.getCondition());
         print(") {");
 
-        // Generate the loop body
         indent++;
         for (Ast.Statement statement : ast.getStatements()) {
             newline(indent);
             visit(statement);
         }
         indent--;
-
-        // Close the loop
         newline(indent);
         print("}");
-
-        return null; // Void return
+        return null;
     }
-
-//    @Override
-//    public Void visit(Ast.Statement.Return ast) {
-//        throw new UnsupportedOperationException(); //TODO
-//    }
 
     @Override
     public Void visit(Ast.Statement.Return ast) {
-        // Generate the return statement
-        newline(indent);
         print("return ");
         visit(ast.getValue());
         print(";");
-
-        return null; // Void return
+        return null;
     }
-
-//    @Override
-//    public Void visit(Ast.Expression.Literal ast) {
-//        throw new UnsupportedOperationException(); //TODO
-//    }
 
     @Override
     public Void visit(Ast.Expression.Literal ast) {
         Object literal = ast.getLiteral();
+        if (literal instanceof String) {
 
-        if (literal == null) {
-            // Null literal
-            print("null");
-        } else if (literal instanceof Boolean) {
-            // Boolean literal (true or false)
-            print(literal.toString());
-        } else if (literal instanceof BigInteger || literal instanceof BigDecimal) {
-            // Integer or Decimal literal
-            print(literal.toString());
-        } else if (literal instanceof String) {
-            // String literal (enclosed in double quotes)
-            print("\"", literal.toString(), "\"");
-        } else if (literal instanceof Character) {
-            // Character literal (enclosed in single quotes)
-            print("'", literal.toString(), "'");
+            print("\"", literal, "\"");
         } else {
-            throw new UnsupportedOperationException("Unsupported literal type: " + literal.getClass().getName());
+            print(literal.toString());
+
         }
-
-        return null; // Void return
+        return null;
     }
-
-
-//    @Override
-//    public Void visit(Ast.Expression.Group ast) {
-//        throw new UnsupportedOperationException(); //TODO
-//    }
 
     @Override
     public Void visit(Ast.Expression.Group ast) {
-        // Print opening parenthesis
         print("(");
-
-        // Generate the enclosed expression
         visit(ast.getExpression());
-
-        // Print closing parenthesis
         print(")");
-
-        return null; // Void return
+        return null;
     }
-
-//    @Override
-//    public Void visit(Ast.Expression.Binary ast) {
-//        throw new UnsupportedOperationException(); //TODO
-//    }
 
     @Override
     public Void visit(Ast.Expression.Binary ast) {
-        // Generate the left-hand expression
         visit(ast.getLeft());
-
-        // Print the operator with spaces around it
         print(" ", ast.getOperator(), " ");
-
-        // Generate the right-hand expression
         visit(ast.getRight());
-
-        return null; // Void return
+        return null;
     }
-
-//    @Override
-//    public Void visit(Ast.Expression.Access ast) {
-//        throw new UnsupportedOperationException(); //TODO
-//    }
 
     @Override
     public Void visit(Ast.Expression.Access ast) {
-        // Check if the expression has a receiver
         if (ast.getReceiver().isPresent()) {
-            // Visit the receiver and add a dot (.)
             visit(ast.getReceiver().get());
             print(".");
         }
-
-        // Print the name of the accessed field or method
         print(ast.getName());
-
-        return null; // Void return
+        return null;
     }
-
-//    @Override
-//    public Void visit(Ast.Expression.Function ast) {
-//        throw new UnsupportedOperationException(); //TODO
-//    }
 
     @Override
     public Void visit(Ast.Expression.Function ast) {
-        // Check if the expression has a receiver
-        if (ast.getReceiver().isPresent()) {
-            // Visit the receiver and add a dot (.)
-            visit(ast.getReceiver().get());
-            print(".");
-        }
-
-        // Print the function name
-        print(ast.getName(), "(");
-
-        // Generate and print the arguments
-        for (int i = 0; i < ast.getArguments().size(); i++) {
-            visit(ast.getArguments().get(i));
-            if (i < ast.getArguments().size() - 1) {
-                print(", ");
+        //            // change print to "System.out.println"
+        if ("print".equals(ast.getName())) {
+            print("System.out.println(");
+            for (int i = 0; i < ast.getArguments().size(); i++) {
+                visit(ast.getArguments().get(i));
+                if (i < ast.getArguments().size() - 1) {
+                    print(", ");
+                }
             }
+            print(")");
+        } else {
+
+            if (ast.getReceiver().isPresent()) {
+                visit(ast.getReceiver().get());
+                print(".");
+            }
+            print(ast.getName(), "(");
+            for (int i = 0; i < ast.getArguments().size(); i++) {
+                visit(ast.getArguments().get(i));
+                if (i < ast.getArguments().size() - 1) {
+
+                    print(", ");
+                }
+            }
+            print(")");
         }
-
-        // Close the parentheses
-        print(")");
-
-        return null; // Void return
+        return null;
     }
 
+    private String getTypeName(String type) {
+        switch (type) {
+            case "Integer":
+                return "int";
+            case "Decimal":
+                return "double";
+            case "Boolean":
+                return "boolean";
+            case "Character":
+
+                return "char";
+            case "String":
+                return "String";
+            default:
+                return type;
+        }
+    }
 }
